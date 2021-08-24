@@ -28,7 +28,9 @@ module clock_divider#(
     output reg clock_out
     );
 
-reg [$clog2( $max(ClocksHigh, ClocksLow)-1 ):0]counter;
+localparam MaxDivider = ClocksHigh > ClocksLow ? ClocksHigh : ClocksLow;
+
+reg [$clog2( MaxDivider - 1 ):0]counter;
 
 initial
 begin

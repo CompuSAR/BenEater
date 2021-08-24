@@ -77,22 +77,7 @@ via6522 via(
     .nIrq(nIRQ)
 );
 
-generate
-  genvar i;
-  for (i=0; i<8; i=i+1) begin // : dff
-    IOBUF ioBufA(
-        .O(portAin[i]),
-        .IO(port_a[i]),
-        .I(portAout[i]),
-        .T(portAmask[i])
-      );
-    IOBUF ioBufB(
-        .O(portBin[i]),
-        .IO(port_b[i]),
-        .I(portBout[i]),
-        .T(portBmask[i])
-      );
-  end
-endgenerate
+IOBufBus#(8) IOBufA( .O(portAin), .I(portAout), .T(portAmask), .IO(port_a) );
+IOBufBus#(8) IOBufB( .O(portBin), .I(portBout), .T(portBmask), .IO(port_b) );
 
 endmodule
