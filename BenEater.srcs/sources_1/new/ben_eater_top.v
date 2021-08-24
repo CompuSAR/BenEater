@@ -23,39 +23,37 @@
 module ben_eater_top(
     input clock50Mhz,
     input nReset,
-    output [7:0] port_a,
+    inout [7:0] port_a,
     inout [7:0] port_b
     );
 
 localparam ClockDivider = 50; // 50Mhz to 1Mhz
-reg clock1Mhz;
-reg [$clog2(ClockDivider)-1:0]clock1MhzDivider;
+wire clock1Mhz;
 
-initial
-begin
-    clock1Mhz = 1;
-    clock1MhzDivider = 0;
-end
-
-always@( posedge clock50Mhz )
-begin
-    clock1MhzDivider <= clock1MhzDivider+1;
-    
-    if( clock1MhzDivider==ClockDivider ) begin
-        clock1Mhz <= 0;
-        clock1MhzDivider <= 1;
-    end else if( clock1MhzDivider==(ClockDivider/2) ) begin
-        clock1Mhz <= 1;
-    end
-end
+clock_divider#( ClockDivider/2, ClockDivider/2 ) clock1MhzGenerator( .clock_in(clock50Mhz), .clock_out(clock1Mhz) );
 
 wire [15:0] addressBus;
 wire [7:0] dataBusToCpu;
 wire [7:0] dataBusFromCpu;
-wire writeEnable;
+wire readWRITE;
+wire nIRQ;
 
 wire [7:0]portAout, portAin, portAmask;
 wire [7:0]portBout, portBin, portBmask;
+
+r6502_tc cpu(
+    .clk_clk_i(clock1Mhz),
+    .d_i(dataBusToCpu),
+    .d_o(dataBusFromCpu),
+    .a_o(addressBus),
+    .wr_n_o(readWRITE),
+    
+    .irq_n_i(1),
+    .nmi_n_i(1),
+    .so_n_i(1), // Set overflow. A relic of times bygone.
+    .rdy_i(1),
+    .rst_rst_n_i(nReset)
+);
 
 via6522 via(
     .phi2(clock1Mhz),
@@ -63,18 +61,20 @@ via6522 via(
     .cs( addressBus[15:13] == 3 ), // We can tighten it to adderssBus[15:4]==12'x600
     .nReset( nReset ),
     .rs( addressBus[3:0] ),
-    .rWb( writeEnable ),
+    .rWb( readWRITE ),
     
     .dataIn( dataBusFromCpu ),
     .dataOut( dataBusToCpu ),
     
     .paOut(portAout),
-    .paIn(port_a),
+    .paIn(portAin),
     .paMask(portAmask),
 
     .pbOut(portBout),
     .pbIn(portBin),
-    .pbMask(portBmask)
+    .pbMask(portBmask),
+    
+    .nIrq(nIRQ)
 );
 
 generate
